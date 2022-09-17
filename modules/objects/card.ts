@@ -1,5 +1,5 @@
 export default class Card {
-    url: string;
+    url?: string;
     title: string;
     description: string;
     type: string;
@@ -12,7 +12,7 @@ export default class Card {
     height: number;
     image?: string;
     embed_url: string;
-    blurhash: string;
+    blurhash?: string;
 
     constructor(data: CardData) {
         this.url = data.url;

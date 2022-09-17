@@ -107,6 +107,11 @@ export default class TruthSocialClient {
         return json.map((status: any) => new Status(status));
       });
     },
+    tag: async (tag: string): Promise<Status[]> => {
+      return this.request("https://truthsocial.com/api/v1/timelines/tag/" + tag, "GET").then((json) => {
+        return json.map((status: any) => new Status(status));
+      });
+    },
   };
 
   public account = {
@@ -147,11 +152,28 @@ export default class TruthSocialClient {
       const data = await this.request(`https://truthsocial.com/api/v1/accounts/${id}/statuses`, "GET", options);
       return data.map((status: StatusData) => new Status(status));
     },
+    favorite: async (id: string): Promise<Status> => {
+      return new Status(await this.request(`https://truthsocial.com/api/v1/statuses/${id}/favourite`, "POST"));
+    },
   };
 
   public carousels = {
     suggestions: async (limit: number): Promise<Suggestion[]> => {
       return await this.request(`https://truthsocial.com/api/v1/truth/carousels/suggestions`, "GET", { limit });
+    },
+  };
+
+  public trends = {
+    get: async (): Promise<Trend[]> => {
+      return await this.request(`https://truthsocial.com/api/v1/trends`, "GET");
+    },
+  };
+
+  public favorites = {
+    get: async (limit: number): Promise<Status[]> => {
+      return await this.request(`https://truthsocial.com/api/v1/favourites`, "GET", { limit }).then((json) => {
+        return json.map((status: any) => new Status(status));
+      });
     },
   };
 }
