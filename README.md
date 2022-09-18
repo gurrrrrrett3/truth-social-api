@@ -1,0 +1,1 @@
+for research uses only, for no political gain, and for no commercial purposes.
