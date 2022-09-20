@@ -18,6 +18,7 @@ export default class Account {
     moved: any;
     fields: any[];
     bot: boolean;
+    verified: boolean;
 
     constructor(data: AccountData) {
         this.id = data.id;
@@ -39,5 +40,6 @@ export default class Account {
         this.moved = data.moved;
         this.fields = data.fields;
         this.bot = data.bot;
+        this.verified = data.verified;
     }
 }

@@ -1,6 +1,7 @@
 import fetch from "node-fetch";
 import config from "../config";
 import Account from "./objects/account";
+import RequestError from "./objects/requestError";
 import Status from "./objects/status";
 
 interface ClientOptions {
@@ -45,10 +46,10 @@ export default class TruthSocialClient {
         client_id: info.clientId,
         client_secret: info.clientSecret,
       }),
-    })
+    });
 
-    const json = await res.json()
-    
+    const json = await res.json();
+
     if (json.error) {
       throw new Error(json.error);
     }
@@ -88,14 +89,18 @@ export default class TruthSocialClient {
       body: body ? JSON.stringify(body) : undefined,
     });
 
-    if (res.status == 429) {
-      throw new Error("Rate limited");
-    }
-
     const json = await res.json();
 
     if (json.error) {
-      throw new Error(json.error);
+      throw new RequestError({
+        error: json.error,
+        errorDescription: res.statusText,
+        method,
+        url,
+        statusCode: res.status,
+        body,
+        qs,
+      });
     }
 
     return json;
@@ -115,19 +120,19 @@ export default class TruthSocialClient {
   };
 
   public account = {
-    verifyCredentials: async ():Promise<VerifyCredentialsData> => {
+    verifyCredentials: async (): Promise<VerifyCredentialsData> => {
       return this.request("https://truthsocial.com/api/v1/accounts/verify_credentials", "GET");
     },
-    get: async (
-      id: string,
-    ): Promise<Account> => {
+    get: async (id: string): Promise<Account> => {
       return new Account(await this.request(`https://truthsocial.com/api/v1/accounts/${id}`, "GET"));
     },
     follow: async (id: string): Promise<Account> => {
       return new Account(await this.request(`https://truthsocial.com/api/v1/accounts/${id}/follow`, "POST"));
     },
     unfollow: async (id: string): Promise<Account> => {
-      return new Account(await this.request(`https://truthsocial.com/api/v1/accounts/${id}/unfollow`, "POST"));
+      return new Account(
+        await this.request(`https://truthsocial.com/api/v1/accounts/${id}/unfollow`, "POST")
+      );
     },
   };
 
@@ -149,29 +154,70 @@ export default class TruthSocialClient {
         exclude_replies?: boolean;
       }
     ): Promise<Status[]> => {
-      const data = await this.request(`https://truthsocial.com/api/v1/accounts/${id}/statuses`, "GET", options);
+      const data = await this.request(
+        `https://truthsocial.com/api/v1/accounts/${id}/statuses`,
+        "GET",
+        options
+      );
       return data.map((status: StatusData) => new Status(status));
     },
     favorite: async (id: string): Promise<Status> => {
-      return new Status(await this.request(`https://truthsocial.com/api/v1/statuses/${id}/favourite`, "POST"));
+      return new Status(
+        await this.request(`https://truthsocial.com/api/v1/statuses/${id}/favourite`, "POST")
+      );
+    },
+    unfavorite: async (id: string): Promise<Status> => {
+      return new Status(
+        await this.request(`https://truthsocial.com/api/v1/statuses/${id}/unfavourite`, "POST")
+      );
+    },
+    reblog: async (id: string): Promise<Status> => {
+      return new Status(await this.request(`https://truthsocial.com/api/v1/statuses/${id}/reblog`, "POST"));
+    },
+
+    favoritedBy: async (id: string): Promise<Account[]> => {
+      const data = await this.request(`https://truthsocial.com/api/v1/statuses/${id}/favourited_by`, "GET");
+      return data.map((account: AccountData) => new Account(account));
+    },
+
+    rebloggedBy: async (id: string): Promise<Account[]> => {
+      const data = await this.request(`https://truthsocial.com/api/v1/statuses/${id}/reblogged_by`, "GET");
+      return data.map((account: AccountData) => new Account(account));
+    },
+
+    context: {
+      ancestors: async (id: string): Promise<Status[]> => {
+        const data = await this.request(
+          `https://truthsocial.com/api/v1/statuses/${id}/context/ancestors`,
+          "GET"
+        );
+        return data.map((status: StatusData) => new Status(status));
+      },
+      descendants: async (id: string): Promise<Status[]> => {
+        const data = await this.request(
+          `https://truthsocial.com/api/v1/statuses/${id}/context/descendants`,
+          "GET"
+        );
+        return data.map((status: StatusData) => new Status(status));
+      },
     },
   };
 
   public carousels = {
-    suggestions: async (limit: number): Promise<Suggestion[]> => {
-      return await this.request(`https://truthsocial.com/api/v1/truth/carousels/suggestions`, "GET", { limit });
+    suggestions: (limit: number): Promise<Suggestion[]> => {
+      return this.request(`https://truthsocial.com/api/v1/truth/carousels/suggestions`, "GET", { limit });
     },
   };
 
   public trends = {
-    get: async (): Promise<Trend[]> => {
-      return await this.request(`https://truthsocial.com/api/v1/trends`, "GET");
+    get: (): Promise<Trend[]> => {
+      return this.request(`https://truthsocial.com/api/v1/trends`, "GET");
     },
   };
 
   public favorites = {
-    get: async (limit: number): Promise<Status[]> => {
-      return await this.request(`https://truthsocial.com/api/v1/favourites`, "GET", { limit }).then((json) => {
+    get: (limit: number): Promise<Status[]> => {
+      return this.request(`https://truthsocial.com/api/v1/favourites`, "GET", { limit }).then((json) => {
         return json.map((status: any) => new Status(status));
       });
     },

@@ -5,8 +5,8 @@ import { tClient } from "../..";
 export default class Status {
     id: string;
     createdAt: string;
-    inReplyToId: any;
-    inReplyToAccountId: any;
+    inReplyToId?: string;
+    inReplyToAccountId?: string;
     sensitive: boolean;
     spoilerText: string;
     visibility: string;
@@ -22,15 +22,15 @@ export default class Status {
     bookmarked: boolean;
     content: string;
     reblog: any;
-    account: any;
+    account: Account;
     mediaAttachments: any[];
-    mentions: any[];
-    tags: any[];
-    emojis: any[];
-    card: any;
-    poll: any;
-    quote: any;
-    inReplyTo: any;
+    mentions: Mention[];
+    tags: Tag[];
+    emojis?: any[];
+    card: Card;
+    poll?: any;
+    quote?: Quote;
+    inReplyTo?: Inreplyto;
 
     constructor(data: StatusData) {
         this.id = data.id;
