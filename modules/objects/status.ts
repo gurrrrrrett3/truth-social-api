@@ -1,6 +1,5 @@
 import Account from "./account";
 import Card from "./card";
-import { tClient } from "../..";
 
 export default class Status {
     id: string;
@@ -61,9 +60,5 @@ export default class Status {
         this.poll = data.poll;
         this.quote = data.quote;
         this.inReplyTo = data.in_reply_to;
-    }
-
-    async favorite() {
-        tClient.status.favorite(this.id)
     }
 }

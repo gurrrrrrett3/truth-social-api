@@ -3,32 +3,28 @@ import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
 import spread from "./methods/spread";
 import favorite from "./methods/favorite";
+import Time, { ms } from "./time";
+import accounts from "./accounts.json";
 
 dotenv.config();
 
-export const tClient = new TruthSocialClient({
-  username: process.env.USERNAME,
-  password: process.env.PASSWORD,
+export const clients: TruthSocialClient[] = [];
+
+accounts.forEach((account) => {
+  clients.push(
+    new TruthSocialClient(account)
+  );
 });
 
 export const db = new PrismaClient();
 
-// @ts-ignore
-Array.prototype.randomize = function () {
-  const newArray = this.slice(0);
-  for (let i = newArray.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-  }
-  return newArray;
-};
-
 setTimeout(async () => {
   await spread(5);
   await favorite();
-}, 1000);
+}, ms("1 second"));
 
 setInterval(async () => {
-  spread(5);
-  favorite();
-}, 60000);
+  console.log("Running tick");
+  await spread(10);
+  await favorite();
+}, ms("10 minutes"));

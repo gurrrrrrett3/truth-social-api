@@ -1,78 +1,81 @@
 import { db } from "../index";
-import { tClient } from "..";
+import { clients } from "..";
 import Util from "../util";
 import Status from "../modules/objects/status";
 
 export default async function favorite() {
-  const trends = await tClient.trends.get().catch((e) => console.log(e));
+
+  clients.forEach(async (client) => {
+
+  const trends = await client.trends.get().catch((e) => console.log(e));
   if (!trends) return;
 
-  trends.slice(5).forEach(async (trend) => {
-    const posts = await tClient.timeline.tag(trend.name).catch((e) => console.log(e));
+  let statuses: Status[] = [];
 
+  for (const trend of trends) {
+    const posts = await client.timeline.tag(trend.name).catch((e) => console.log(e));
     if (!posts) return;
 
-    // @ts-ignore
-    const rPosts = posts.randomize().slice(50) as Status[];
+    posts.forEach((post) => {
+      statuses.push(post);
+    })
+  }
 
-    rPosts.forEach(async (post) => {
-      let isRateLimited = false;
+  console.log("Found", statuses.length, "statuses to favorite");
 
-     const choice = Math.floor(Math.random() * 10);
+  statuses = Util.randomizeArray(statuses).slice(20);
 
-      if (choice < 9) {
-        if (post.favourited) return;
-        
-        await post.favorite().catch(() => {
-          console.log("Ratelimited trying to favorite", post.id);
-          isRateLimited = true;
-        });
-      } else {
-        if (post.favourited) return;
+  let promises: Promise<void>[] = [];
 
-        await post.favorite().catch(() => {
-          console.log("Ratelimited trying to favorite", post.id);
-          isRateLimited = true;
-        });
+  for (const status of statuses) {
+    const p = new Promise<void>(async (resolve, reject) => {
+    let isRateLimited = false;
 
-        await post.reblog().catch(() => {
-          console.log("Ratelimited trying to reblog", post.id);
-          isRateLimited = true;
-        });
-      }
+    await client.status.favorite(status.id).catch(() => {
+      console.log("Ratelimited trying to favorite", status.id);
+      isRateLimited = true;
+    });
 
-      await db.post
-        .upsert({
-          where: {
-            id: post.id,
-          },
-          create: {
-            id: post.id,
-            content: post.content,
-            createdAt: post.createdAt,
-            favorited: !isRateLimited,
-            author: {
-              connectOrCreate: {
-                where: {
-                  id: post.account.id,
-                },
-                create: {
-                  id: post.account.id,
-                  avatar: post.account.avatar,
-                  tag: post.account.acct,
-                  following: false,
-                  username: post.account.displayName,
-                  note: post.account.note,
-                  verified: false,
-                },
+    console.log("Favorited", status.id);
+
+    await db.post
+      .upsert({
+        where: {
+          id: status.id,
+        },
+        create: {
+          id: status.id,
+          content: status.content,
+          createdAt: status.createdAt,
+          favorited: !isRateLimited,
+          author: {
+            connectOrCreate: {
+              where: {
+                id: status.account.id,
+              },
+              create: {
+                id: status.account.id,
+                avatar: status.account.avatar,
+                tag: status.account.acct,
+                following: false,
+                username: status.account.displayName,
+                note: status.account.note,
+                verified: false,
               },
             },
           },
-          update: {
-            favorited: !isRateLimited,
-          },
-        })
-        .catch((e) => `Prisma err go brrr`);
-    });
-  });
+        },
+        update: {
+          favorited: !isRateLimited,
+        },
+      })
+      .catch((e) => reject(`Prisma err go brrr`));
+    })
+
+    promises.push(p);
+  }
+
+  await Promise.all(promises).catch((e) => console.log(e));
+
+  })
 }
